@@ -9,7 +9,9 @@ import { renderAdmin as renderAdminPage } from './admin.js'
 
 let categories = []
 let products = []
-let storeSettings = { site_name: 'Kru.Fang Studio', logo_url: 'images/logo.svg' }
+let storeSettings = { site_name: 'Kru.Fang Studio', logo_url: 'images/logo.svg', hero_slides: [] }
+let heroSlideIndex = 0
+let heroSlideTimer = null
 let selectedCategory = 'ทั้งหมด'
 let query = ''
 let currentProduct = null
@@ -65,19 +67,81 @@ async function init() {
 
   async function loadStoreSettings() {
     try {
-      const [siteName, logoUrl] = await Promise.all([
+      const [siteName, logoUrl, heroSlidesValue] = await Promise.all([
         db.getSetting('site_name', 'Kru.Fang Studio'),
-        db.getSetting('logo_url', 'images/logo.svg')
+        db.getSetting('logo_url', 'images/logo.svg'),
+        db.getSetting('hero_slides', '[]')
       ])
-      storeSettings = { site_name: siteName, logo_url: logoUrl }
+      let heroSlides = []
+      try {
+        const parsedHeroSlides = JSON.parse(heroSlidesValue || '[]')
+        if (Array.isArray(parsedHeroSlides) && parsedHeroSlides.every(url => typeof url === 'string')) {
+          heroSlides = parsedHeroSlides.filter(Boolean)
+        } else {
+          throw new Error('Hero slides setting must be a list of image URLs')
+        }
+      } catch (error) {
+        console.error('Could not parse hero slides setting:', error)
+      }
+      storeSettings = { site_name: siteName, logo_url: logoUrl, hero_slides: heroSlides }
       const name = document.getElementById('storeName')
       if (name) name.textContent = siteName
       document.querySelectorAll('#adminLogo img, #adminView .sidebar h3 img').forEach(image => {
         image.src = logoUrl
       })
       document.title = `${siteName} — สื่อการสอน & Template`
+      renderHeroSlides(heroSlides)
     } catch (error) {
       console.error('Could not load store settings:', error)
+    }
+  }
+
+  function renderHeroSlides(slides) {
+    const container = document.getElementById('heroSlides')
+    const controls = document.getElementById('heroSlideControls')
+    const hero = document.querySelector('.hero')
+    if (!container || !controls || !hero) return
+
+    clearInterval(heroSlideTimer)
+    heroSlideTimer = null
+    hero.classList.toggle('has-slides', slides.length > 0)
+    container.replaceChildren()
+    controls.replaceChildren()
+    controls.hidden = slides.length <= 1
+    heroSlideIndex = 0
+
+    slides.forEach((url, index) => {
+      const image = document.createElement('img')
+      image.className = `hero-slide${index === 0 ? ' active' : ''}`
+      image.src = url
+      image.alt = ''
+      image.setAttribute('aria-hidden', 'true')
+      container.append(image)
+
+      if (slides.length > 1) {
+        const dot = document.createElement('button')
+        dot.className = `hero-slide-dot${index === 0 ? ' active' : ''}`
+        dot.type = 'button'
+        dot.setAttribute('aria-label', `ไปยังสไลด์ที่ ${index + 1}`)
+        dot.setAttribute('aria-current', index === 0 ? 'true' : 'false')
+        dot.addEventListener('click', () => showHeroSlide(index))
+        controls.append(dot)
+      }
+    })
+
+    function showHeroSlide(index) {
+      heroSlideIndex = (index + slides.length) % slides.length
+      container.querySelectorAll('.hero-slide').forEach((image, imageIndex) => {
+        image.classList.toggle('active', imageIndex === heroSlideIndex)
+      })
+      controls.querySelectorAll('.hero-slide-dot').forEach((dot, dotIndex) => {
+        dot.classList.toggle('active', dotIndex === heroSlideIndex)
+        dot.setAttribute('aria-current', dotIndex === heroSlideIndex ? 'true' : 'false')
+      })
+    }
+
+    if (slides.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      heroSlideTimer = setInterval(() => showHeroSlide(heroSlideIndex + 1), 5000)
     }
   }
 

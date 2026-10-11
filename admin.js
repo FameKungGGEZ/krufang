@@ -1,4 +1,5 @@
 import * as db from './db.js'
+import './admin.css'
 
 let adminPage = 'dashboard'
 let editingProductId = null
@@ -269,7 +270,12 @@ async function renderCategoriesPage(content) {
     <div class="panel">
       <form id="categoryForm" class="actions"><input id="categoryName" required maxlength="100" placeholder="ชื่อหมวดหมู่"><input id="categoryColor" type="color" value="#e5f2ff"><button class="primary" type="submit">เพิ่มหมวดหมู่</button></form>
     </div>
-    <div class="panel">${categories.length ? categories.map(category => `<div class="actions" style="justify-content:space-between"><span><i style="display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:middle;background:${esc(category.bg_color || '#e5f2ff')}"></i> ${esc(category.name)}</span><button class="outline" data-delete-category="${esc(category.id)}">ลบ</button></div>`).join('') : '<p>ยังไม่มีหมวดหมู่</p>'}</div>`
+    <div class="panel category-list">${categories.length ? categories.map(category => `
+      <div class="category-row">
+        <span class="category-name"><i style="background:${esc(category.bg_color || '#e5f2ff')}"></i>${esc(category.name)}</span>
+        <button class="category-delete" data-delete-category="${esc(category.id)}" aria-label="ลบหมวดหมู่ ${esc(category.name)}">ลบ</button>
+      </div>
+    `).join('') : '<p>ยังไม่มีหมวดหมู่</p>'}</div>`
 
   content.querySelector('#categoryForm').addEventListener('submit', async event => {
     event.preventDefault()
@@ -299,11 +305,25 @@ async function renderCategoriesPage(content) {
 }
 
 async function renderSettingsPage(content) {
-  const [siteName, facebookLink, logoUrl] = await Promise.all([
+  const [siteName, facebookLink, logoUrl, heroSlidesValue] = await Promise.all([
     db.getSetting('site_name', 'Kru.Fang Studio'),
     db.getSetting('facebook_link', 'https://www.facebook.com/'),
-    db.getSetting('logo_url', 'images/logo.svg')
+    db.getSetting('logo_url', 'images/logo.svg'),
+    db.getSetting('hero_slides', '[]')
   ])
+  let heroSlides = []
+  try {
+    const parsedHeroSlides = JSON.parse(heroSlidesValue || '[]')
+    if (Array.isArray(parsedHeroSlides) && parsedHeroSlides.every(url => typeof url === 'string')) {
+      heroSlides = parsedHeroSlides.filter(Boolean)
+    } else {
+      throw new Error('Hero slides setting must be a list of image URLs')
+    }
+  } catch (error) {
+    console.error('Could not parse hero slides setting:', error)
+    throw new Error('อ่านรายการสไลด์ไม่สำเร็จ กรุณาตรวจสอบค่า hero_slides ใน Supabase')
+  }
+
   content.innerHTML = `
     <div class="section-head"><div><h2>ตั้งค่าร้าน</h2></div></div>
     <div class="panel"><form id="settingsForm">
@@ -312,33 +332,56 @@ async function renderSettingsPage(content) {
       <div class="field"><label for="logoFile">อัปโหลดโลโก้ (PNG, JPG, WebP)</label><input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
       <div class="field"><label for="logoUrl">หรือใส่ URL โลโก้</label><input id="logoUrl" type="url" value="${esc(logoUrl)}"></div>
       <img src="${esc(logoUrl)}" alt="ตัวอย่างโลโก้" style="width:80px;height:80px;object-fit:contain" onerror="this.style.display='none'">
+      <section class="hero-slides-settings">
+        <h3>ภาพสไลด์หน้าแรก</h3>
+        <p>อัปโหลดรูปได้หลายภาพ ภาพจะสลับอัตโนมัติทุก 5 วินาที หากไม่มีภาพจะแสดงพื้นหลังไล่สีเดิม</p>
+        <div class="field"><label for="heroSlideFiles">เพิ่มภาพสไลด์ (PNG, JPG, WebP ไม่เกิน 10 MB ต่อภาพ)</label><input id="heroSlideFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></div>
+        <div class="hero-slide-settings-grid">
+          ${heroSlides.map((url, index) => `
+            <label class="hero-slide-settings-item">
+              <img src="${esc(url)}" alt="ภาพสไลด์ที่ ${index + 1}" onerror="this.classList.add('image-unavailable')">
+              <span><input type="checkbox" data-keep-hero-slide="${esc(url)}" checked> ใช้ภาพนี้</span>
+            </label>
+          `).join('') || '<p class="hero-slides-empty">ยังไม่มีภาพที่บันทึกไว้</p>'}
+        </div>
+      </section>
       <button class="primary" type="submit">บันทึกการตั้งค่า</button>
     </form></div>`
   content.querySelector('#settingsForm').addEventListener('submit', async event => {
     event.preventDefault()
     const form = event.currentTarget
+    const uploadedHeroUrls = []
+    let uploadedLogoUrl = null
     try {
       const logoFile = form.querySelector('#logoFile').files[0]
+      const heroFiles = Array.from(form.querySelector('#heroSlideFiles').files)
+      const retainedHeroUrls = [...form.querySelectorAll('[data-keep-hero-slide]:checked')]
+        .map(input => input.dataset.keepHeroSlide)
+      const allowedImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp'])
+      const oversizedHeroImage = heroFiles.find(file => file.size > 10 * 1024 * 1024)
+      const invalidHeroImage = heroFiles.find(file => !allowedImageTypes.has(file.type))
+      if (oversizedHeroImage) throw new Error(`ภาพ "${oversizedHeroImage.name}" มีขนาดเกิน 10 MB`)
+      if (invalidHeroImage) throw new Error(`ไฟล์ "${invalidHeroImage.name}" ต้องเป็น PNG, JPG หรือ WebP`)
+
       let nextLogoUrl = form.querySelector('#logoUrl').value.trim()
-      let uploadedLogoUrl = null
       if (logoFile) {
         const path = `${crypto.randomUUID()}-${logoFile.name.replace(/[^\w.-]+/g, '_')}`
         nextLogoUrl = await db.uploadFile('logos', path, logoFile)
         uploadedLogoUrl = nextLogoUrl
       }
-      try {
-        await Promise.all([
-          db.saveSetting('site_name', form.querySelector('#siteName').value.trim()),
-          db.saveSetting('facebook_link', form.querySelector('#facebookLink').value.trim()),
-          db.saveSetting('logo_url', nextLogoUrl)
-        ])
-      } catch (error) {
-        if (uploadedLogoUrl) {
-          const uploadedLogo = storageFile('logos', uploadedLogoUrl)
-          if (uploadedLogo) await db.deleteFile(uploadedLogo.bucket, uploadedLogo.path)
-        }
-        throw error
+      for (const file of heroFiles) {
+        const path = `${crypto.randomUUID()}-${file.name.replace(/[^\w.-]+/g, '_')}`
+        uploadedHeroUrls.push(await db.uploadFile('covers', path, file))
       }
+
+      const nextHeroSlides = [...retainedHeroUrls, ...uploadedHeroUrls]
+      await Promise.all([
+        db.saveSetting('site_name', form.querySelector('#siteName').value.trim()),
+        db.saveSetting('facebook_link', form.querySelector('#facebookLink').value.trim()),
+        db.saveSetting('logo_url', nextLogoUrl)
+      ])
+      await db.saveSetting('hero_slides', JSON.stringify(nextHeroSlides))
+
       if (logoFile && logoUrl?.includes('/storage/v1/object/')) {
         const oldLogo = storageFile('logos', logoUrl)
         if (oldLogo) {
@@ -349,9 +392,32 @@ async function renderSettingsPage(content) {
           }
         }
       }
-      toast('บันทึกการตั้งค่าแล้ว')
+
+      const retainedHeroSet = new Set(nextHeroSlides)
+      const removedSlideFiles = heroSlides
+        .filter(url => !retainedHeroSet.has(url))
+        .map(url => storageFile('covers', url))
+        .filter(file => file?.bucket === 'covers')
+      const cleanupResults = await Promise.allSettled(
+        removedSlideFiles.map(file => db.deleteFile(file.bucket, file.path))
+      )
+      const cleanupFailed = cleanupResults.some(result => result.status === 'rejected')
+      if (cleanupFailed) {
+        console.error('Could not remove replaced hero slide files:', cleanupResults)
+      }
+      toast(cleanupFailed ? 'บันทึกแล้ว แต่ลบภาพสไลด์เก่าไม่สำเร็จ' : 'บันทึกการตั้งค่าแล้ว')
       signalStoreChanged()
     } catch (error) {
+      const uploadedFiles = [
+        ...uploadedHeroUrls.map(url => storageFile('covers', url)),
+        uploadedLogoUrl ? storageFile('logos', uploadedLogoUrl) : null
+      ].filter(Boolean)
+      const cleanupResults = await Promise.allSettled(
+        uploadedFiles.map(file => db.deleteFile(file.bucket, file.path))
+      )
+      if (cleanupResults.some(result => result.status === 'rejected')) {
+        console.error('Could not clean up uploaded settings images:', cleanupResults)
+      }
       console.error('Could not save settings:', error)
       toast(`บันทึกการตั้งค่าไม่สำเร็จ: ${error.message || ''}`)
     }
