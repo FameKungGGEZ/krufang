@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.vercel
+*.log
+.DS_Store
+products-data.json
+previews/
+สินค้า/
+index.backup*.html
