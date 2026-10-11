@@ -88,6 +88,8 @@ git push -u origin main
 | `VITE_SUPABASE_URL` | `https://xxxxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGc...` (คีย์จาก Supabase) |
 
+ให้ใช้ Build Command `npm run build` และ Output Directory `dist` (Vercel ตรวจพบค่าจาก `vercel.json` ได้) จากนั้น Vercel จะ deploy ไฟล์ที่ Vite สร้าง พร้อมไฟล์ใน `public/`
+
 ### 3.3 Deploy!
 1. คลิก **"Deploy"**
 2. รอ 1-2 นาที
