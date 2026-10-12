@@ -38,6 +38,7 @@ export function SiteFooter() {
         <p className="mx-auto flex max-w-7xl items-center gap-1.5 px-4 py-5 text-xs text-muted-foreground md:px-8">
           © 2026 Kru.Fang Studio · ทำด้วย <Heart className="size-3 fill-brand-pink text-brand-pink" /> สำหรับคุณครูทุกคน
         </p>
+        <p className="pb-4 text-center text-xs text-muted-foreground">made by pannathon patto</p>
       </div>
     </footer>);
 
