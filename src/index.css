@@ -1,0 +1,64 @@
+/* --- MANAGED FONT IMPORTS START (do not edit manually) --- */
+/* INTERNAL USE NAME: Heading */
+@import url('https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+/* INTERNAL USE NAME: Mono */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+/* --- MANAGED FONT IMPORTS END --- */
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import './_designSystem/ds-6551b66a-cfd3-4df9-a9b1-9ead8d7fe7e9/index.css';
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+:root {
+  --background: #f7fbff;
+  --foreground: #17345e;
+  --card: #ffffff;
+  --card-foreground: #17345e;
+  --popover: #ffffff;
+  --popover-foreground: #17345e;
+  --primary: #367ff0;
+  --primary-foreground: #ffffff;
+  --secondary: #eaf3ff;
+  --secondary-foreground: #2464c6;
+  --muted: #f0f5fb;
+  --muted-foreground: #6880a2;
+  --accent: #eaf3ff;
+  --accent-foreground: #2464c6;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
+  --border: #dceafa;
+  --input: #d3e3f6;
+  --ring: #9bc8ff;
+  --chart-1: #367ff0;
+  --chart-2: #ff7caa;
+  --chart-3: #3cc49a;
+  --chart-4: #f5b93d;
+  --chart-5: #8b7cf6;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #17345e;
+  --sidebar-primary: #367ff0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaf3ff;
+  --sidebar-accent-foreground: #2464c6;
+  --sidebar-border: #dceafa;
+  --sidebar-ring: #9bc8ff;
+}
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}

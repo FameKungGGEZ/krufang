@@ -1,2 +1,0 @@
--- The schema used by the app is maintained in supabase-setup.sql.
--- Run that file in the Supabase SQL Editor; this file remains only for compatibility.
